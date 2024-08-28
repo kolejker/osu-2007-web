@@ -1,3 +1,4 @@
+
 export default class MainMenu extends PIXI.Container {
     constructor(app, loadScreen) {
         super();

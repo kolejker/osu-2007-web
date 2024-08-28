@@ -8,8 +8,9 @@ export default class SongSelect extends PIXI.Container {
         this.backToMenu = backToMenu;
         this.expandedSong = null;
 
-        const bg = PIXI.Sprite.from('Resources/song-select-background.png');
+        const bg = PIXI.Sprite.from('Resources/menu-background.png');
         this.addChild(bg);
+
 
         this.songData = {
             "UverWorld - UNKNOWN ORCHESTRA": [
