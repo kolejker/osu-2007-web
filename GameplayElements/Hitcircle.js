@@ -40,7 +40,6 @@ export default class Hitcircle {
     }
 
     drawCircle(container, x, y, remainingTime) {
-        
         const circleSprite = new PIXI.Sprite(this.hitCircleTexture);
         circleSprite.anchor.set(0.5);
         circleSprite.x = x;
@@ -58,7 +57,6 @@ export default class Hitcircle {
 
         container.addChild(circleSprite);
         container.addChild(overlaySprite);
-
 
         const startTime = Date.now();
         const update = () => {
@@ -80,16 +78,19 @@ export default class Hitcircle {
         approachCircleSprite.x = x;
         approachCircleSprite.y = y;
 
-        approachCircleSprite.scale.set(2.8);
+        const initialScaleFactor = 2.0; 
+        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.17); 
+        approachCircleSprite.scale.set(initialScaleFactor);
+
         container.addChild(approachCircleSprite);
 
         const startTime = Date.now();
         const animateShrink = () => {
             const elapsed = Date.now() - startTime;
             const progress = elapsed / this.preempt;
-            const scaleFactor = 3 - 2 * progress;
+            const scaleFactor = initialScaleFactor - (initialScaleFactor - finalScaleFactor) * progress;
 
-            approachCircleSprite.scale.set(Math.max(scaleFactor, 0.8));
+            approachCircleSprite.scale.set(Math.max(scaleFactor, finalScaleFactor));
 
             if (progress < 1) {
                 requestAnimationFrame(animateShrink);
