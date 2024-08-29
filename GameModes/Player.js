@@ -15,9 +15,9 @@ export default class Player extends PIXI.Container {
         beatmap.loadBeatmap().then(() => {
             this.circleSize = beatmap.difficulty.CircleSize;
             this.overallDifficulty = beatmap.difficulty.OverallDifficulty;
-            this.createDisplay();
-            this.loadAudio(beatmap.audioFilename);
 
+            this.loadAudio(beatmap.audioFilename);
+            this.createDisplay();
             this.hitObjectManager = new HitObjectManager(beatmap.hitObjects, beatmap.difficulty);
             this.hitObjectManager.startRendering(this);
         });

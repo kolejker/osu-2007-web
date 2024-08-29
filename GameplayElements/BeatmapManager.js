@@ -19,25 +19,20 @@ export default class Beatmap {
 
     parseOsuFile(content) {
         const lines = content.split('\n').map(line => line.trim());
+        let metadata = {};
         let section = '';
-        
-        lines.forEach(line => {
-            if (line.startsWith('[') && line.endsWith(']')) {
-                section = line;
-            } else if (section === '[General]') {
-                if (line.startsWith('AudioFilename:')) {
-                    this.audioFilename = line.split(':')[1].trim();
-                }
-            } else if (section === '[Metadata]') {
-                this.parseMetadata(line);
-            } else if (section === '[Difficulty]') {
-                this.parseDifficulty(line);
-            } else if (section === '[TimingPoints]') {
-                this.parseTimingPoint(line);
-            } else if (section === '[HitObjects]') {
-                this.hitObjects.push(this.parseHitObject(line));
+    
+        for (let line of lines) {
+            if (line.startswith('[') && line.endswith(']')) {
+                section = line.slice(1, -1);
+                metadata[section] = {};
             }
-        });
+    
+            (key, value) = line.split(': ');
+            this.metadata[section][key] = value;
+        }
+    
+        return metadata;
     }
 
     parseMetadata(line) {
