@@ -19,14 +19,19 @@ export default class HitObjectManager {
 
     renderHitObjects(container) {
         const currentTime = Date.now() - this.startTime;
-
+    
         this.hitObjects.forEach(obj => {
-            if (obj.time - 1500 <= currentTime && obj.time + 500 >= currentTime) {
+            // Calculate the preempt time for the hit object
+            const preemptTime = obj.time - this.hitCircle.preempt;
+    
+            // Check if it's time to draw the hit object based on the preempt time
+            if (preemptTime <= currentTime && obj.time + 500 >= currentTime) {
                 if (!obj.hasBeenDrawn) {
                     if (obj.type === 'circle') {
+                        // Pass the remaining time to the drawCircle method
                         this.hitCircle.drawCircle(container, obj.x, obj.y, obj.time - currentTime);
                     } else if (obj.type === 'slider') {
-                        const progress = (currentTime - obj.time + 1500) / 2000;
+                        const progress = (currentTime - preemptTime) / 2000;
                         if (!obj.slider) {
                             obj.slider = new Slider(obj.x, obj.y, obj.curvePoints, 1000);
                             obj.slider.drawSlider(container);
@@ -41,4 +46,4 @@ export default class HitObjectManager {
             }
         });
     }
-}
+}  
