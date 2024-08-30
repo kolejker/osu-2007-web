@@ -78,8 +78,8 @@ export default class Hitcircle {
         approachCircleSprite.x = x;
         approachCircleSprite.y = y;
 
-        const initialScaleFactor = 2.0; 
-        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.17); 
+        const initialScaleFactor = 3.0;
+        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.12);
         approachCircleSprite.scale.set(initialScaleFactor);
 
         container.addChild(approachCircleSprite);
