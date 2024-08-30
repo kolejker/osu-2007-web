@@ -1,5 +1,4 @@
 export default class Hitcircle {
-    
     constructor(cs = 5, ar = 5) {
         this.hitCircleTexture = PIXI.Texture.from('Resources/hitcircle.png');
         this.hitCircleOverlayTexture = PIXI.Texture.from('Resources/hitcircleoverlay.png');
@@ -7,20 +6,7 @@ export default class Hitcircle {
         this.circleSize = cs;
         this.radius = this.calculateRadius(cs);
         this.setApproachRate(ar);
-        const HIT_WINDOWS = {
-            300: 50, 
-            100: 100, 
-            50: 150  
-        };
-        
-        this.hitValue = 0;
-        this.isHit = false;
-        this.hitText = new PIXI.Text('', { fontSize: 24, fill: 0xffffff });
-        this.hitText.anchor.set(0.5);
-        this.hitText.visible = false;
-        container.addChild(this.hitText);
     }
-
 
     calculateRadius(cs) {
         return 54.4 - 4.48 * cs;
@@ -58,96 +44,32 @@ export default class Hitcircle {
         circleSprite.anchor.set(0.5);
         circleSprite.x = x;
         circleSprite.y = y;
-    
+
         const overlaySprite = new PIXI.Sprite(this.hitCircleOverlayTexture);
         overlaySprite.anchor.set(0.5);
         overlaySprite.x = x;
         overlaySprite.y = y;
-    
-        const scaleFactor = this.radius / (this.hitCircleTexture.width / 3);
+
+        const scaleFactor = this.radius / (this.hitCircleTexture.width / 2);
         circleSprite.scale.set(scaleFactor);
         overlaySprite.scale.set(scaleFactor);
-    
         const approachCircleSprite = this.drawApproachCircle(container, x, y, remainingTime);
-    
+
         container.addChild(circleSprite);
         container.addChild(overlaySprite);
-    
+
         const startTime = Date.now();
-        const hitTime = startTime + remainingTime; 
-
-
-        circleSprite.interactive = true;
-        circleSprite.buttonMode = true;
-        circleSprite.on('pointerdown', () => this.handleClick(hitTime, container, circleSprite, overlaySprite, approachCircleSprite));
-    
         const update = () => {
             const elapsed = Date.now() - startTime;
             if (elapsed < remainingTime) {
                 requestAnimationFrame(update);
             } else {
-
-                this.miss(container, circleSprite, overlaySprite, approachCircleSprite);
+                container.removeChild(circleSprite);
+                container.removeChild(overlaySprite);
+                container.removeChild(approachCircleSprite);
             }
         };
         requestAnimationFrame(update);
-    }
-
-    handleClick(hitTime, container, circleSprite, overlaySprite, approachCircleSprite) {
-        const currentTime = Date.now();
-        const hitDifference = Math.abs(currentTime - hitTime);
-
-        if (hitDifference <= HIT_WINDOWS[300]) {
-            this.hitValue = 300;
-            this.hit(container, circleSprite, overlaySprite, approachCircleSprite);
-        } else if (hitDifference <= HIT_WINDOWS[100]) {
-            this.hitValue = 100;
-            this.hit(container, circleSprite, overlaySprite, approachCircleSprite);
-        } else if (hitDifference <= HIT_WINDOWS[50]) {
-            this.hitValue = 50;
-            this.hit(container, circleSprite, overlaySprite, approachCircleSprite);
-        } else {
-            this.hitValue = 0;
-            this.miss(container, circleSprite, overlaySprite, approachCircleSprite);
-        }
-    }
-
-    hit(container, circleSprite, overlaySprite, approachCircleSprite) {
-        if (this.isHit) return;
-        this.isHit = true;
-        console.log(`Hit Value: ${this.hitValue}`);
-
-        this.hitText.text = this.hitValue > 0 ? this.hitValue.toString() : '';
-        this.hitText.position.set(circleSprite.x, circleSprite.y - 50);
-        this.hitText.visible = true;
-
-        gsap.to(this.hitText, { alpha: 0, y: this.hitText.y - 50, duration: 1, onComplete: () => {
-            container.removeChild(this.hitText);
-        }});
-
-        gsap.to(circleSprite.scale, { x: 1.6, y: 1.6, duration: 0.2 });
-        gsap.to(circleSprite, { alpha: 0, duration: 0.5, delay: 0.2, onComplete: () => {
-            container.removeChild(circleSprite);
-            container.removeChild(overlaySprite);
-            container.removeChild(approachCircleSprite);
-        }});
-    }
-
-    miss(container, circleSprite, overlaySprite, approachCircleSprite) {
-        console.log('Miss!');
-
-        this.hitText.text = 'Miss';
-        this.hitText.position.set(circleSprite.x, circleSprite.y - 50);
-        this.hitText.visible = true;
-        gsap.to(this.hitText, { alpha: 0, y: this.hitText.y - 50, duration: 1, onComplete: () => {
-            container.removeChild(this.hitText);
-        }});
-
-        gsap.to(circleSprite, { alpha: 0, duration: 0.5, onComplete: () => {
-            container.removeChild(circleSprite);
-            container.removeChild(overlaySprite);
-            container.removeChild(approachCircleSprite);
-        }});
     }
 
     drawApproachCircle(container, x, y, remainingTime) {
@@ -155,29 +77,26 @@ export default class Hitcircle {
         approachCircleSprite.anchor.set(0.5);
         approachCircleSprite.x = x;
         approachCircleSprite.y = y;
-    
-        const initialScaleFactor = 3.0;
-        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.12);
+
+        const initialScaleFactor = 2.0; 
+        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.17); 
         approachCircleSprite.scale.set(initialScaleFactor);
-    
+
         container.addChild(approachCircleSprite);
-    
+
         const startTime = Date.now();
         const animateShrink = () => {
             const elapsed = Date.now() - startTime;
-            const progress = elapsed / remainingTime;  
-    
+            const progress = elapsed / this.preempt;
             const scaleFactor = initialScaleFactor - (initialScaleFactor - finalScaleFactor) * progress;
-    
+
             approachCircleSprite.scale.set(Math.max(scaleFactor, finalScaleFactor));
-    
+
             if (progress < 1) {
                 requestAnimationFrame(animateShrink);
-            } else {
-                container.removeChild(approachCircleSprite);
             }
         };
-    
+
         animateShrink();
         return approachCircleSprite;
     }

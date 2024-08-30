@@ -1,3 +1,4 @@
+// Player.js
 import Beatmap from '../GameplayElements/BeatmapManager.js';
 import HitObjectManager from '../GameplayElements/HitObjectManager.js';
 
@@ -7,9 +8,6 @@ export default class Player extends PIXI.Container {
         this.filePath = filePath;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.loadBeatmap();
-
-        this.handleKeyDown = this.handleKeyDown.bind(this);
-        window.addEventListener('keydown', this.handleKeyDown);
     }
 
     loadBeatmap() {
@@ -51,24 +49,9 @@ export default class Player extends PIXI.Container {
     playAudio() {
         if (!this.audioBuffer) return;
 
-        this.source = this.audioContext.createBufferSource();
-        this.source.buffer = this.audioBuffer;
-        this.source.connect(this.audioContext.destination);
-        this.source.start(0);
-    }
-
-    stopAudio() {
-        if (this.source) {
-            this.source.stop(); 
-            this.source.disconnect(); 
-        }
-    }
-
-    handleKeyDown(event) {
-        if (event.key === 'Escape') { 
-            this.stopAudio();  
-            window.removeEventListener('keydown', this.handleKeyDown);  
-
-        }
+        const source = this.audioContext.createBufferSource();
+        source.buffer = this.audioBuffer;
+        source.connect(this.audioContext.destination);
+        source.start(0);
     }
 }
