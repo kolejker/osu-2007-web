@@ -1,7 +1,8 @@
-
 export default class MainMenu extends PIXI.Container {
     constructor(app, loadScreen) {
         super();
+
+        this.buttonHandlers = [];
 
         const bg = PIXI.Sprite.from('Resources/menu-background.png');
         this.addChild(bg);
@@ -21,7 +22,6 @@ export default class MainMenu extends PIXI.Container {
             button.x = x;
             button.y = y;
 
-
             const hoverXOffset = 32;
             const hoverTint = 0xff9999; 
 
@@ -29,21 +29,34 @@ export default class MainMenu extends PIXI.Container {
             let targetX = originalX;
             let targetTint = 0xFFFFFF; 
 
-            button.on('pointerover', () => {
+            const pointerOverHandler = () => {
                 targetX = originalX + hoverXOffset;
                 targetTint = hoverTint;
-            });
-
-            button.on('pointerout', () => {
+            };
+            
+            const pointerOutHandler = () => {
                 targetX = originalX;
                 targetTint = 0xFFFFFF;
-            });
+            };
+            
+            const pointerDownHandler = onClick;
 
-            button.on('pointerdown', onClick);
+            button.on('pointerover', pointerOverHandler);
+            button.on('pointerout', pointerOutHandler);
+            button.on('pointerdown', pointerDownHandler);
+
+            this.buttonHandlers.push({
+                button,
+                handlers: {
+                    pointerover: pointerOverHandler,
+                    pointerout: pointerOutHandler,
+                    pointerdown: pointerDownHandler
+                }
+            });
 
             this.addChild(button);
 
-            app.ticker.add(() => {
+            button.tickerCallback = () => {
                 button.x += (targetX - button.x) * 0.12;
 
                 const currentTint = button.tint;
@@ -60,12 +73,32 @@ export default class MainMenu extends PIXI.Container {
                 const newB = Math.round(b + (targetB - b) * 0.1);
 
                 button.tint = (newR << 16) + (newG << 8) + newB;
-            });
+            };
+            
+            app.ticker.add(button.tickerCallback);
         });
 
         const logo = PIXI.Sprite.from('Resources/menu-osu.png');
         logo.x = 0;
         logo.y = 20;
         this.addChild(logo);
+        
+        this.app = app;
+    }
+    
+    cleanup() {
+        this.buttonHandlers.forEach(({ button, handlers }) => {
+            button.interactive = false;
+            
+            if (handlers.pointerover) button.off('pointerover', handlers.pointerover);
+            if (handlers.pointerout) button.off('pointerout', handlers.pointerout);
+            if (handlers.pointerdown) button.off('pointerdown', handlers.pointerdown);
+            
+            if (button.tickerCallback) {
+                this.app.ticker.remove(button.tickerCallback);
+            }
+        });
+        
+        this.buttonHandlers = [];
     }
 }

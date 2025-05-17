@@ -2,14 +2,36 @@ import Beatmap from '../GameplayElements/BeatmapManager.js';
 import HitObjectManager from '../GameplayElements/HitObjectManager.js';
 
 export default class Player extends PIXI.Container {
-    constructor(filePath) {
+    constructor(filePath, loadScreen) {
         super();
         this.filePath = filePath;
+        this.loadScreen = loadScreen;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        this.createInputBlocker();
+        
         this.loadBeatmap();
 
         this.handleKeyDown = this.handleKeyDown.bind(this);
         window.addEventListener('keydown', this.handleKeyDown);
+    }
+
+    createInputBlocker() {
+        this.gameplayContainer = new PIXI.Container();
+        this.addChild(this.gameplayContainer);
+        
+        const blocker = new PIXI.Graphics();
+        blocker.beginFill(0x000000, 0.01); 
+        blocker.drawRect(0, 0, 1024, 768);
+        blocker.endFill();
+        blocker.interactive = true;
+        blocker.buttonMode = false;
+        
+        blocker.on('pointerdown', (event) => {
+            event.stopPropagation();
+        });
+        
+        this.addChildAt(blocker, 0);
     }
 
     loadBeatmap() {
@@ -21,7 +43,8 @@ export default class Player extends PIXI.Container {
             this.loadAudio(beatmap.audioFilename);
 
             this.hitObjectManager = new HitObjectManager(beatmap.hitObjects, beatmap.difficulty);
-            this.hitObjectManager.startRendering(this);
+            
+            this.hitObjectManager.startRendering(this.gameplayContainer);
         });
     }
 
@@ -30,7 +53,7 @@ export default class Player extends PIXI.Container {
         bg.beginFill(0x000000);
         bg.drawRect(0, 0, 800, 600);
         bg.endFill();
-        this.addChild(bg);
+        this.gameplayContainer.addChild(bg);
     }
 
     loadAudio(audioFilename) {
@@ -66,9 +89,19 @@ export default class Player extends PIXI.Container {
 
     handleKeyDown(event) {
         if (event.key === 'Escape') { 
-            this.stopAudio();  
-            window.removeEventListener('keydown', this.handleKeyDown);  
-
+            this.stopAudio();
+            if (this.loadScreen) {
+                this.loadScreen('SongSelect');
+            }
+        }
+    }
+    
+    cleanup() {
+        window.removeEventListener('keydown', this.handleKeyDown);
+        this.stopAudio();
+        
+        if (this.hitObjectManager && this.hitObjectManager.cleanup) {
+            this.hitObjectManager.cleanup();
         }
     }
 }

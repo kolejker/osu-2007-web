@@ -5,13 +5,13 @@ export default class SongSelect extends PIXI.Container {
         super();
 
         this.app = app;
+        this.loadScreen = loadScreen;
         this.expandedSong = null;
-
+        this.songItems = [];
 
         const BackButton = PIXI.Sprite.from('Resources/menu-back.png');
         const bg = PIXI.Sprite.from('Resources/menu-background.png');
         this.addChild(bg);
-
         
         this.songData = {
             "UverWorld - UNKNOWN ORCHESTRA": [
@@ -27,7 +27,6 @@ export default class SongSelect extends PIXI.Container {
 
         this.createSongList();
         this.arrangeItems();
-
 
         BackButton.interactive = true;
         BackButton.buttonMode = true;
@@ -63,7 +62,6 @@ export default class SongSelect extends PIXI.Container {
     arrangeItems() {
         let currentY = 100;
         const spacing = 50;
-        const fileSpacing = 30;
 
         this.songItems.forEach(({ item }) => {
             item.y = currentY;
@@ -81,7 +79,10 @@ export default class SongSelect extends PIXI.Container {
                 fileItem.interactive = true;
                 fileItem.buttonMode = true;
                 fileItem.y = index * 30;
-                fileItem.on('pointerdown', () => this.openFile(file));
+                
+                fileItem.openFileHandler = () => this.openFile(file);
+                fileItem.on('pointerdown', fileItem.openFileHandler);
+                
                 container.addChild(fileItem);
             });
         });
@@ -123,11 +124,22 @@ export default class SongSelect extends PIXI.Container {
         const existingPlayer = this.getChildByName('playerContainer');
         if (existingPlayer) {
             this.removeChild(existingPlayer);
+            if (existingPlayer.cleanup) {
+                existingPlayer.cleanup();
+            }
+            existingPlayer.destroy({ children: true });
         }
 
-        const player = new Player(filePath);
+        const player = new Player(filePath, this.loadScreen);
         player.name = 'playerContainer';
         this.addChild(player);
+        
+        this.songItems.forEach(({ item }) => {
+            item.interactive = false;
+            item.fileContainer.children.forEach(child => {
+                child.interactive = false;
+            });
+        });
     }
 
     getFolderName(file) {
@@ -139,7 +151,30 @@ export default class SongSelect extends PIXI.Container {
 
     clearScreen() {
         while (this.children.length > 0) {
-            this.removeChild(this.children[0]);
+            const child = this.children[0];
+            if (child.cleanup) {
+                child.cleanup();
+            }
+            this.removeChild(child);
+            child.destroy({ children: true });
+        }
+    }
+    
+    cleanup() {
+        this.songItems.forEach(({ item }) => {
+            item.interactive = false;
+            
+            item.fileContainer.children.forEach(fileItem => {
+                fileItem.interactive = false;
+                if (fileItem.openFileHandler) {
+                    fileItem.off('pointerdown', fileItem.openFileHandler);
+                }
+            });
+        });
+        
+        const player = this.getChildByName('playerContainer');
+        if (player && player.cleanup) {
+            player.cleanup();
         }
     }
 }

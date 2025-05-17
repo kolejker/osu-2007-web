@@ -25,6 +25,10 @@ export default class Slider {
         this.ballContainer = new PIXI.Container();
 
         this.mainContainer = new PIXI.Container();
+        
+        this.preempt = 0;
+        this.fadeIn = 0;
+        this.startTime = 0;
     }
 
     drawSlider(container, remainingTime, cs = 5, ar = 5) {
@@ -69,14 +73,48 @@ export default class Slider {
             this.createEndHitCircle(this.mainContainer, endPoint.x, endPoint.y, cs);
         }
 
+        this.hitcircle.updateCircleSize(cs);
+        this.hitcircle.setApproachRate(ar);
+        this.preempt = this.hitcircle.preempt;
+        this.fadeIn = this.hitcircle.fadeIn;
+        
+        const initialOpacity = Math.min(1.0, (this.preempt - remainingTime) / this.fadeIn);
+        this.mainContainer.alpha = initialOpacity;
+        
+        this.startTime = Date.now();
+        this.remainingTime = remainingTime;
+        
+        this.setupFadeInAnimation();
+
         if (!this.hitcircleSpawned) {
-            this.hitcircle.updateCircleSize(cs);
-            this.hitcircle.setApproachRate(ar);
             this.hitcircle.drawCircle(this.mainContainer, this.x, this.y, remainingTime);
             this.hitcircleSpawned = true;
         }
 
         this.hasBeenDrawn = true;
+    }
+    
+    setupFadeInAnimation() {
+        const startTime = this.startTime;
+        const fadeInAnimation = () => {
+            const elapsed = Date.now() - startTime;
+            const currentTimeUntilHit = this.remainingTime - elapsed;
+            
+            if (currentTimeUntilHit <= 0) {
+                this.mainContainer.alpha = 1.0;
+                return;
+            }
+            
+            if (currentTimeUntilHit > this.preempt - this.fadeIn) {
+                const fadeProgress = (this.preempt - currentTimeUntilHit) / this.fadeIn;
+                this.mainContainer.alpha = Math.min(1.0, fadeProgress);
+                requestAnimationFrame(fadeInAnimation);
+            } else {
+                this.mainContainer.alpha = 1.0;
+            }
+        };
+        
+        requestAnimationFrame(fadeInAnimation);
     }
 
     drawLinearCurve() {
@@ -280,13 +318,11 @@ export default class Slider {
         this.endCircle.addChild(circleSprite);
         this.endCircle.addChild(overlaySprite);
 
-
         this.endCircle.x = x;
         this.endCircle.y = y;
 
         container.addChild(this.endCircle);
     }
-
     createSliderBall(container, cs) {
         if (!this.ballContainer.parent) {
             container.addChild(this.ballContainer);
@@ -301,8 +337,16 @@ export default class Slider {
         this.sliderBall = new PIXI.Sprite(sliderBallTexture);
         this.sliderBall.anchor.set(0.5);
         
-        const scaleFactor = baseRadius / (sliderBallTexture.width / 2);  
-        this.sliderBall.scale.set(scaleFactor);
+        if (sliderBallTexture.valid) {
+            const scaleFactor = baseRadius / (sliderBallTexture.width / 2);
+            this.sliderBall.scale.set(scaleFactor);
+        } else {
+            this.sliderBall.scale.set(0.5);
+            sliderBallTexture.once('update', () => {
+                const scaleFactor = baseRadius / (sliderBallTexture.width / 2);
+                this.sliderBall.scale.set(scaleFactor);
+            });
+        }
     
         this.sliderBall.x = this.x;
         this.sliderBall.y = this.y;
@@ -310,7 +354,6 @@ export default class Slider {
         this.ballContainer.addChild(this.sliderBall);
     }
     
-
     updateSlider(progress) {
         if (!this.sliderBall || progress < 0 || progress > 1 || this.sliderPathLength === 0) return;
 

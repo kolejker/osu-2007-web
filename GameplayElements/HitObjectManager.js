@@ -13,6 +13,8 @@ export default class HitObjectManager {
         
         this.timeScaling = 1.0;
         this.lagCompensation = 16;
+        
+        this.preloadTextures();
     }
 
     startRendering(container) {
@@ -108,6 +110,17 @@ export default class HitObjectManager {
         this.timeScaling = scaling;
     }
     
+ 
+    
+    preloadTextures() {
+        const sliderBallTexture = PIXI.Texture.from('Resources/sliderb0.png');
+        
+        if (!sliderBallTexture.valid) {
+            sliderBallTexture.once('update', () => {
+                console.log('Loaded Balls');
+            });
+        }
+    }
     setLagCompensation(ms) {
         this.lagCompensation = ms;
     }
