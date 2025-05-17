@@ -10,16 +10,24 @@ export default class HitObjectManager {
         this.hitCircle = new Hitcircle(this.circleSize, this.approachRate);
         this.activeSliders = [];
         this.delay = delay;
+        
+        this.timeScaling = 1.0;
+        this.lagCompensation = 16;
     }
 
     startRendering(container) {
         this.startTime = Date.now(); 
         this.container = container;
+        this.lastFrameTime = Date.now();
         PIXI.Ticker.shared.add(() => this.renderHitObjects(container));
     }
 
     renderHitObjects(container) {
-        const currentTime = Date.now() - this.startTime - this.delay;
+        const now = Date.now();
+        const deltaTime = now - this.lastFrameTime;
+        this.lastFrameTime = now;
+        
+        const currentTime = (now - this.startTime - this.delay) * this.timeScaling - this.lagCompensation;
 
         this.hitObjects.forEach(obj => {
             const preemptTime = obj.time - this.hitCircle.preempt;
@@ -35,6 +43,7 @@ export default class HitObjectManager {
                         if (!obj.slider) {
                             const curveType = obj.curveType || 'B';
                             const slides = obj.slides || 1;
+                            
                             const length = obj.length || this.calculateSliderLength(obj);
                             
                             obj.slider = new Slider(
@@ -55,25 +64,23 @@ export default class HitObjectManager {
                 }
             }
             
-            if (obj.type === 'slider' && obj.hasBeenDrawn) {
+            if (obj.type === 'slider' && obj.hasBeenDrawn && obj.slider) {
                 const sliderEndTime = obj.time + obj.duration;
                 
                 if (currentTime >= obj.time && currentTime <= sliderEndTime) {
-                    const progress = (currentTime - obj.time) / obj.duration;
-                    if (obj.slider) {
-                        obj.slider.updateSlider(progress);
-                    }
+                    const progress = Math.min(1.0, Math.max(0.0, (currentTime - obj.time) / obj.duration));
+                    obj.slider.updateSlider(progress);
                 }
                 
                 if (currentTime > sliderEndTime && obj.slider && obj.slider.hasBeenDrawn) {
-                    if (obj.slider) {
-                        obj.slider.removeSlider(container);
-                        const sliderIndex = this.activeSliders.indexOf(obj.slider);
-                        if (sliderIndex !== -1) {
-                            this.activeSliders.splice(sliderIndex, 1);
-                        }
-                        obj.slider = null;
+                    obj.slider.removeSlider(container);
+                    
+                    const sliderIndex = this.activeSliders.indexOf(obj.slider);
+                    if (sliderIndex !== -1) {
+                        this.activeSliders.splice(sliderIndex, 1);
                     }
+                    
+                    obj.slider = null;
                 }
             }
         });
@@ -95,5 +102,13 @@ export default class HitObjectManager {
         });
         
         return length;
+    }
+    
+    setTimeScaling(scaling) {
+        this.timeScaling = scaling;
+    }
+    
+    setLagCompensation(ms) {
+        this.lagCompensation = ms;
     }
 }
