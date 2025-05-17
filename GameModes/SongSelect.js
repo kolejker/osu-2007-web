@@ -1,18 +1,18 @@
 import Player from './Player.js'; 
 
 export default class SongSelect extends PIXI.Container {
-    constructor(app, backToMenu) {
+    constructor(app, loadScreen) {
         super();
 
         this.app = app;
-        this.backToMenu = backToMenu;
         this.expandedSong = null;
 
 
+        const BackButton = PIXI.Sprite.from('Resources/menu-back.png');
         const bg = PIXI.Sprite.from('Resources/menu-background.png');
         this.addChild(bg);
 
-
+        
         this.songData = {
             "UverWorld - UNKNOWN ORCHESTRA": [
                 "UverWorld - UNKNOWN ORCHESTRA - Easy.osu",
@@ -28,13 +28,12 @@ export default class SongSelect extends PIXI.Container {
         this.createSongList();
         this.arrangeItems();
 
-        const backButton = new PIXI.Text('Back to Menu', { fill: 'white', fontSize: 32 });
-        backButton.interactive = true;
-        backButton.buttonMode = true;
-        backButton.x = app.view.width / 2 - backButton.width / 2;
-        backButton.y = app.view.height - 100;
-        backButton.on('pointerdown', () => loadScreen('MainMenu'));
-        this.addChild(backButton);
+
+        BackButton.interactive = true;
+        BackButton.buttonMode = true;
+        BackButton.y = app.view.height - BackButton.height;
+        BackButton.on('pointerdown', () => loadScreen('MainMenu'));
+        this.addChild(BackButton);
     }
 
     createSongList() {

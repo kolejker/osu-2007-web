@@ -1,16 +1,16 @@
 export default class Options extends PIXI.Container {
     constructor(app, loadScreen) {
         super();
-
+        const BackButton = PIXI.Sprite.from('Resources/menu-back.png');
         const bg = PIXI.Sprite.from('Resources/menu-background.png');
         this.addChild(bg);
 
-        const backButton = new PIXI.Text('Back to Menu', { fill: 'white', fontSize: 32 });
-        backButton.interactive = true;
-        backButton.buttonMode = true;
-        backButton.x = app.view.width / 2 - backButton.width / 2;
-        backButton.y = app.view.height - 100;
-        backButton.on('pointerdown', () => loadScreen('MainMenu'));
-        this.addChild(backButton);
+
+        BackButton.interactive = true;
+        BackButton.buttonMode = true;
+
+        BackButton.y = app.view.height - BackButton.height;
+        BackButton.on('pointerdown', () => loadScreen('MainMenu'));
+        this.addChild(BackButton);
     }
 }
