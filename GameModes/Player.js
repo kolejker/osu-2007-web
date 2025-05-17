@@ -1,6 +1,6 @@
 import Beatmap from '../GameplayElements/BeatmapManager.js';
 import HitObjectManager from '../GameplayElements/HitObjectManager.js';
-
+import HPBar from './Player/HPBar.js';
 export default class Player extends PIXI.Container {
     constructor(filePath, loadScreen) {
         super();
@@ -50,10 +50,12 @@ export default class Player extends PIXI.Container {
 
     createDisplay() {
         const bg = new PIXI.Graphics();
-        bg.beginFill(0x000000);
-        bg.drawRect(0, 0, 800, 600);
+        bg.beginFill(0x515372);
+        bg.drawRect(0, 0, 1024, 768);
         bg.endFill();
         this.gameplayContainer.addChild(bg);
+        this.hpBar = new HPBar();
+        this.gameplayContainer.addChild(this.hpBar)
     }
 
     loadAudio(audioFilename) {

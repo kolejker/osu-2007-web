@@ -1,15 +1,22 @@
+import PlayfieldScaler from '../Helpers/OsuPixels.js';
+
 export default class Hitcircle {
     constructor(cs = 5, ar = 5) {
         this.hitCircleTexture = PIXI.Texture.from('Resources/hitcircle.png');
         this.hitCircleOverlayTexture = PIXI.Texture.from('Resources/hitcircleoverlay.png');
         this.approachCircleTexture = PIXI.Texture.from('Resources/approachcircle.png');
         this.circleSize = cs;
+        
+        this.playfieldScaler = new PlayfieldScaler();
+        
         this.radius = this.calculateRadius(cs);
         this.setApproachRate(ar);
     }
 
     calculateRadius(cs) {
-        return 54.4 - 4.48 * cs;
+        const baseRadius = 54.4 - 4.48 * cs;
+        
+        return this.playfieldScaler.mapSize(baseRadius);
     }
 
     updateCircleSize(cs) {
@@ -153,5 +160,10 @@ export default class Hitcircle {
 
         animateShrink();
         return approachCircleSprite;
+    }
+    
+    updatePlayfieldScaler(width, height) {
+        this.playfieldScaler.updateScreenSize(width, height);
+        this.radius = this.calculateRadius(this.circleSize);
     }
 }

@@ -1,5 +1,6 @@
 import Hitcircle from './Hitcircle.js';
 import Slider from './Slider.js';
+import PlayfieldScaler from '../Helpers/OsuPixels.js';
 
 export default class HitObjectManager {
     constructor(hitObjects, difficulty, delay = 900) {
@@ -14,6 +15,8 @@ export default class HitObjectManager {
         this.timeScaling = 1.0;
         this.lagCompensation = 16;
         
+        this.playfieldScaler = new PlayfieldScaler();
+        
         this.preloadTextures();
     }
 
@@ -21,6 +24,10 @@ export default class HitObjectManager {
         this.startTime = Date.now(); 
         this.container = container;
         this.lastFrameTime = Date.now();
+        
+        // uncomment for the playfield boundaries
+        // container.addChild(this.playfieldScaler.createPlayfieldOverlay());
+        
         PIXI.Ticker.shared.add(() => this.renderHitObjects(container));
     }
 
@@ -36,10 +43,12 @@ export default class HitObjectManager {
 
             if (preemptTime <= currentTime && obj.time >= currentTime) {
                 if (!obj.hasBeenDrawn) {
-                    console.log(`Rendering new hit object: Type=${obj.type}, Scheduled Time=${obj.time}, Current Time=${currentTime}`);
+
+                    const screenPos = this.playfieldScaler.mapPosition(obj.x, obj.y);
+                    console.log(`Rendering new hit object: Type=${obj.type}, Position=${screenPos.x},${screenPos.y}, Scheduled Time=${obj.time}, Current Time=${currentTime}`);
                     
                     if (obj.type === 'circle') {
-                        this.hitCircle.drawCircle(container, obj.x, obj.y, obj.time - currentTime);
+                        this.hitCircle.drawCircle(container, screenPos.x, screenPos.y, obj.time - currentTime);
                         obj.hasBeenDrawn = true;
                     } else if (obj.type === 'slider') {
                         if (!obj.slider) {
@@ -48,15 +57,21 @@ export default class HitObjectManager {
                             
                             const length = obj.length || this.calculateSliderLength(obj);
                             
+                            const mappedCurvePoints = obj.curvePoints.map(point => 
+                                this.playfieldScaler.mapPosition(point.x, point.y));
+                            
                             obj.slider = new Slider(
-                                obj.x, 
-                                obj.y, 
-                                obj.curvePoints, 
+                                screenPos.x, 
+                                screenPos.y, 
+                                mappedCurvePoints, 
                                 obj.duration || 1000,
                                 curveType,
                                 slides,
-                                length
+                                this.playfieldScaler.mapSize(length) 
                             );
+                            
+                            // Pass the current playfield scaler to the slider
+                            obj.slider.playfieldScaler = this.playfieldScaler;
                             
                             obj.slider.drawSlider(container, obj.time - currentTime, this.circleSize, this.approachRate);
                             this.activeSliders.push(obj.slider);
@@ -110,7 +125,22 @@ export default class HitObjectManager {
         this.timeScaling = scaling;
     }
     
- 
+    setLagCompensation(ms) {
+        this.lagCompensation = ms;
+    }
+    
+    updateScreenSize(width, height) {
+        // Update the playfieldScaler with new dimensions
+        this.playfieldScaler.updateScreenSize(width, height);
+        
+        // Update the hitCircle's playfieldScaler
+        this.hitCircle.updatePlayfieldScaler(width, height);
+        
+        // Update all active sliders with the new playfieldScaler
+        this.activeSliders.forEach(slider => {
+            slider.updatePlayfieldScaler(width, height);
+        });
+    }
     
     preloadTextures() {
         const sliderBallTexture = PIXI.Texture.from('Resources/sliderb0.png');
@@ -120,8 +150,5 @@ export default class HitObjectManager {
                 console.log('Loaded Balls');
             });
         }
-    }
-    setLagCompensation(ms) {
-        this.lagCompensation = ms;
     }
 }

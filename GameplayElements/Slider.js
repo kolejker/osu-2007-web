@@ -1,4 +1,5 @@
 import Hitcircle from './Hitcircle.js';
+import PlayfieldScaler from '../Helpers/OsuPixels.js';
 
 export default class Slider {
     constructor(x, y, curvePoints, duration, curveType = 'B', slides = 1, length = 100) {
@@ -9,6 +10,8 @@ export default class Slider {
         this.curveType = curveType;
         this.slides = slides;
         this.length = length;
+
+        this.playfieldScaler = new PlayfieldScaler();
 
         this.sliderGraphics = new PIXI.Graphics();
         this.hitcircle = new Hitcircle();
@@ -29,6 +32,20 @@ export default class Slider {
         this.preempt = 0;
         this.fadeIn = 0;
         this.startTime = 0;
+    }
+
+    updatePlayfieldScaler(width, height) {
+        this.playfieldScaler.updateScreenSize(width, height);
+        if (this.hasBeenDrawn && this.mainContainer) {
+            this.redrawWithNewScale();
+        }
+    }
+    
+    redrawWithNewScale() {
+        if (this.mainContainer && this.mainContainer.parent) {
+            const container = this.mainContainer.parent;
+            this.drawSlider(container, this.remainingTime, this.hitcircle.circleSize, this.hitcircle.approachRate);
+        }
     }
 
     drawSlider(container, remainingTime, cs = 5, ar = 5) {
@@ -296,7 +313,8 @@ export default class Slider {
 
         this.endCircle = new PIXI.Container();
 
-        const radius = 54.4 - 4.48 * cs;
+        const baseRadius = 54.4 - 4.48 * cs;
+        const radius = this.playfieldScaler ? this.playfieldScaler.mapSize(baseRadius) : baseRadius;
 
         const hitCircleTexture = PIXI.Texture.from('Resources/hitcircle.png');
         const hitCircleOverlayTexture = PIXI.Texture.from('Resources/hitcircleoverlay.png');
@@ -323,6 +341,7 @@ export default class Slider {
 
         container.addChild(this.endCircle);
     }
+    
     createSliderBall(container, cs) {
         if (!this.ballContainer.parent) {
             container.addChild(this.ballContainer);
@@ -333,17 +352,19 @@ export default class Slider {
         }
     
         const baseRadius = 54.4 - 4.48 * cs;
+        const radius = this.playfieldScaler ? this.playfieldScaler.mapSize(baseRadius) : baseRadius;
+        
         const sliderBallTexture = PIXI.Texture.from('Resources/sliderb0.png');
         this.sliderBall = new PIXI.Sprite(sliderBallTexture);
         this.sliderBall.anchor.set(0.5);
         
         if (sliderBallTexture.valid) {
-            const scaleFactor = baseRadius / (sliderBallTexture.width / 2);
+            const scaleFactor = radius / (sliderBallTexture.width / 2);
             this.sliderBall.scale.set(scaleFactor);
         } else {
             this.sliderBall.scale.set(0.5);
             sliderBallTexture.once('update', () => {
-                const scaleFactor = baseRadius / (sliderBallTexture.width / 2);
+                const scaleFactor = radius / (sliderBallTexture.width / 2);
                 this.sliderBall.scale.set(scaleFactor);
             });
         }

@@ -22,6 +22,12 @@ export default class SongSelect extends PIXI.Container {
             ],
             "1 Kenji Ninuma - DISCO PRINCE": [
                 "Kenji Ninuma - DISCOüÜPRINCE (peppy) [Normal].osu"
+            ],
+            "Brandy - Cross Time": [
+                "Brandy - Cross Time (FFFanatic) [Hard].osu"
+            ],
+            "Scatman John - Scatman": [
+                "Scatman John - Scatman (Extor) [Insane].osu"
             ]
         };
 

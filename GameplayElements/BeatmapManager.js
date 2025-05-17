@@ -95,16 +95,8 @@ export default class Beatmap {
         const parts = line.split(',');
         if (parts.length < 4) return null;
         
-        const gridWidth = 512;
-        const gridHeight = 384;
-        const displayWidth = 1024;
-        const displayHeight = 768;
-
-        const offsetX = (displayWidth - gridWidth) / 2;
-        const offsetY = (displayHeight - gridHeight) / 2;
-
-        const x = parseInt(parts[0]) + offsetX;
-        const y = parseInt(parts[1]) + offsetY;
+        const x = parseInt(parts[0]);
+        const y = parseInt(parts[1]);
         const time = parseInt(parts[2]);
         const typeFlags = parseInt(parts[3]);
         const hitSound = parts[4] ? parseInt(parts[4]) : 0;
@@ -131,8 +123,8 @@ export default class Beatmap {
             for (let i = 1; i < curveInfo.length; i++) {
                 const pointCoords = curveInfo[i].split(':');
                 if (pointCoords.length === 2) {
-                    const px = parseInt(pointCoords[0]) + offsetX;
-                    const py = parseInt(pointCoords[1]) + offsetY;
+                    const px = parseInt(pointCoords[0]);
+                    const py = parseInt(pointCoords[1]);
                     curvePoints.push({ x: px, y: py });
                 }
             }
@@ -165,8 +157,8 @@ export default class Beatmap {
         } else if (isSpinner) {
             const endTime = parts[5] ? parseInt(parts[5]) : time + 1000;
             return {
-                x: displayWidth / 2, 
-                y: displayHeight / 2,
+                x: 256, 
+                y: 192, 
                 time,
                 type: 'spinner',
                 hitSound,
