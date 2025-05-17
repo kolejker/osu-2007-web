@@ -12,7 +12,6 @@ let currentScreen;
 function loadScreen(screenModule) {
     if (currentScreen) {
         app.stage.removeChild(currentScreen);
-        stopAudio()
     }
     import(`./GameModes/${screenModule}.js`).then(module => {
         currentScreen = new module.default(app, loadScreen);

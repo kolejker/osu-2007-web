@@ -39,11 +39,15 @@ export default class Hitcircle {
         }
     }
 
-    drawCircle(container, x, y, remainingTime) {
-        const circleSprite = new PIXI.Sprite(this.hitCircleTexture);
-        circleSprite.anchor.set(0.5);
-        circleSprite.x = x;
-        circleSprite.y = y;
+    drawCircle(container, x, y, timeUntilHit) {
+        if (timeUntilHit <= 0) {
+            return null;
+        }
+
+        const hitCircleSprite = new PIXI.Sprite(this.hitCircleTexture);
+        hitCircleSprite.anchor.set(0.5);
+        hitCircleSprite.x = x;
+        hitCircleSprite.y = y;
 
         const overlaySprite = new PIXI.Sprite(this.hitCircleOverlayTexture);
         overlaySprite.anchor.set(0.5);
@@ -51,50 +55,100 @@ export default class Hitcircle {
         overlaySprite.y = y;
 
         const scaleFactor = this.radius / (this.hitCircleTexture.width / 2);
-        circleSprite.scale.set(scaleFactor);
+        hitCircleSprite.scale.set(scaleFactor);
         overlaySprite.scale.set(scaleFactor);
-        const approachCircleSprite = this.drawApproachCircle(container, x, y, remainingTime);
 
-        container.addChild(circleSprite);
+        const initialOpacity = Math.min(1.0, (this.preempt - timeUntilHit) / this.fadeIn);
+        hitCircleSprite.alpha = initialOpacity;
+        overlaySprite.alpha = initialOpacity;
+
+        const approachCircleSprite = this.drawApproachCircle(container, x, y, timeUntilHit);
+
+        container.addChild(hitCircleSprite);
         container.addChild(overlaySprite);
 
         const startTime = Date.now();
         const update = () => {
             const elapsed = Date.now() - startTime;
-            if (elapsed < remainingTime) {
-                requestAnimationFrame(update);
-            } else {
-                container.removeChild(circleSprite);
+            const currentTimeUntilHit = timeUntilHit - elapsed;
+            
+            if (currentTimeUntilHit <= 0) {
+                container.removeChild(hitCircleSprite);
                 container.removeChild(overlaySprite);
-                container.removeChild(approachCircleSprite);
+                if (approachCircleSprite && approachCircleSprite.parent) {
+                    container.removeChild(approachCircleSprite);
+                }
+                return;
             }
+            
+            if (currentTimeUntilHit > this.preempt - this.fadeIn) {
+                const fadeProgress = (this.preempt - currentTimeUntilHit) / this.fadeIn;
+                hitCircleSprite.alpha = Math.min(1.0, fadeProgress);
+                overlaySprite.alpha = Math.min(1.0, fadeProgress);
+            }
+            
+            requestAnimationFrame(update);
         };
+        
         requestAnimationFrame(update);
+        
+        return {
+            hitCircleSprite,
+            overlaySprite,
+            approachCircleSprite
+        };
     }
 
-    drawApproachCircle(container, x, y, remainingTime) {
+    drawApproachCircle(container, x, y, timeUntilHit) {
+        if (timeUntilHit <= 0 || timeUntilHit > this.preempt) {
+            return null;
+        }
+
         const approachCircleSprite = new PIXI.Sprite(this.approachCircleTexture);
         approachCircleSprite.anchor.set(0.5);
         approachCircleSprite.x = x;
         approachCircleSprite.y = y;
 
-        const initialScaleFactor = 3.0;
-        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 0.12);
-        approachCircleSprite.scale.set(initialScaleFactor);
+        const finalScaleFactor = this.radius / (this.approachCircleTexture.width / 2);
+        
+        const initialScaleFactor = finalScaleFactor * 3.0; 
+        
+        const timeProgress = Math.max(0, (this.preempt - timeUntilHit) / this.preempt);
+        const currentScale = initialScaleFactor - (initialScaleFactor - finalScaleFactor) * timeProgress;
+        approachCircleSprite.scale.set(currentScale);
+        
+        if (timeUntilHit > this.preempt - this.fadeIn) {
+            const fadeProgress = (this.preempt - timeUntilHit) / this.fadeIn;
+            approachCircleSprite.alpha = Math.min(1.0, fadeProgress);
+        } else {
+            approachCircleSprite.alpha = 1.0;
+        }
 
         container.addChild(approachCircleSprite);
 
         const startTime = Date.now();
         const animateShrink = () => {
             const elapsed = Date.now() - startTime;
-            const progress = elapsed / this.preempt;
-            const scaleFactor = initialScaleFactor - (initialScaleFactor - finalScaleFactor) * progress;
-
-            approachCircleSprite.scale.set(Math.max(scaleFactor, finalScaleFactor));
-
-            if (progress < 1) {
-                requestAnimationFrame(animateShrink);
+            const currentTimeUntilHit = timeUntilHit - elapsed;
+            
+            if (currentTimeUntilHit <= 0) {
+                if (approachCircleSprite.parent) {
+                    container.removeChild(approachCircleSprite);
+                }
+                return;
             }
+            
+            const timeProgress = Math.min(1.0, Math.max(0, (this.preempt - currentTimeUntilHit) / this.preempt));
+            
+            const scaleFactor = initialScaleFactor - (initialScaleFactor - finalScaleFactor) * timeProgress;
+            approachCircleSprite.scale.set(scaleFactor);
+            
+            if (currentTimeUntilHit > this.preempt - this.fadeIn) {
+                const fadeProgress = (this.preempt - currentTimeUntilHit) / this.fadeIn;
+                approachCircleSprite.alpha = Math.min(1.0, fadeProgress);
+            }
+            
+            requestAnimationFrame(animateShrink);
         };
 
         animateShrink();
