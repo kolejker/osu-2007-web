@@ -1,4 +1,3 @@
-
 export default class Beatmap {
     constructor(filePath) {
         this.filePath = filePath;
@@ -35,7 +34,10 @@ export default class Beatmap {
             } else if (section === '[TimingPoints]') {
                 this.parseTimingPoint(line);
             } else if (section === '[HitObjects]') {
-                this.hitObjects.push(this.parseHitObject(line));
+                const hitObject = this.parseHitObject(line);
+                if (hitObject) {
+                    this.hitObjects.push(hitObject);
+                }
             }
         });
     }
@@ -59,6 +61,8 @@ export default class Beatmap {
             this.difficulty.CircleSize = parseFloat(line.split(':')[1].trim());
         } else if (line.startsWith('OverallDifficulty:')) {
             this.difficulty.OverallDifficulty = parseFloat(line.split(':')[1].trim());
+        } else if (line.startsWith('ApproachRate:')) {
+            this.difficulty.ApproachRate = parseFloat(line.split(':')[1].trim());
         } else if (line.startsWith('SliderMultiplier:')) {
             this.difficulty.SliderMultiplier = parseFloat(line.split(':')[1].trim());
         } else if (line.startsWith('SliderTickRate:')) {
@@ -67,12 +71,30 @@ export default class Beatmap {
     }
 
     parseTimingPoint(line) {
-        const [time, beatLength] = line.split(',').map(value => parseFloat(value.trim()));
-        this.timingPoints.push({ time, beatLength, bpm: 1 / beatLength * 1000 * 60 });
+        if (!line || line.trim() === '') return;
+        
+        const parts = line.split(',');
+        if (parts.length < 2) return;
+        
+        const time = parseFloat(parts[0]);
+        const beatLength = parseFloat(parts[1]);
+        
+        if (!isNaN(time) && !isNaN(beatLength) && beatLength !== 0) {
+            this.timingPoints.push({ 
+                time, 
+                beatLength, 
+                bpm: 60000 / beatLength,
+                speedMultiplier: beatLength < 0 ? 100 / -beatLength : 1
+            });
+        }
     }
 
     parseHitObject(line) {
+        if (!line || line.trim() === '') return null;
+        
         const parts = line.split(',');
+        if (parts.length < 4) return null;
+        
         const gridWidth = 512;
         const gridHeight = 384;
         const displayWidth = 1024;
@@ -84,32 +106,86 @@ export default class Beatmap {
         const x = parseInt(parts[0]) + offsetX;
         const y = parseInt(parts[1]) + offsetY;
         const time = parseInt(parts[2]);
-        const type = parseInt(parts[3]);
+        const typeFlags = parseInt(parts[3]);
+        const hitSound = parts[4] ? parseInt(parts[4]) : 0;
 
-        let objectParams = {};
-        if (type & 1) {
-            // Hit circle
-            objectParams = {
+        const isCircle = (typeFlags & 1) > 0;
+        const isSlider = (typeFlags & 2) > 0;
+        const isSpinner = (typeFlags & 8) > 0;
+
+        if (isCircle) {
+            return {
                 x,
                 y,
                 time,
-                type: 'circle'
+                type: 'circle',
+                hitSound
             };
-        } else if (type & 2) {
-            // Slider
-            const curvePoints = parts[5].split('|').slice(1).map(point => {
-                const [px, py] = point.split(':').map(Number);
-                return { x: px + offsetX, y: py + offsetY };
-            });
-            objectParams = {
+        } else if (isSlider) {
+            if (parts.length < 7) return null;
+            
+            const curveInfo = parts[5].split('|');
+            const curveType = curveInfo[0];
+            const curvePoints = [];
+            
+            for (let i = 1; i < curveInfo.length; i++) {
+                const pointCoords = curveInfo[i].split(':');
+                if (pointCoords.length === 2) {
+                    const px = parseInt(pointCoords[0]) + offsetX;
+                    const py = parseInt(pointCoords[1]) + offsetY;
+                    curvePoints.push({ x: px, y: py });
+                }
+            }
+            
+            const slides = parts[6] ? parseInt(parts[6]) : 1;
+            const length = parts[7] ? parseFloat(parts[7]) : 100;
+            
+            const sliderMultiplier = this.difficulty.SliderMultiplier || 1.4;
+            const sliderTickRate = this.difficulty.SliderTickRate || 1.0;
+            
+            let currentTimingPoint = this.getTimingPointAtTime(time);
+            
+            const beatLength = currentTimingPoint ? currentTimingPoint.beatLength : 500; 
+            const speedMultiplier = currentTimingPoint ? currentTimingPoint.speedMultiplier : 1;
+            
+            const sliderDuration = length / (sliderMultiplier * 100 * speedMultiplier) * beatLength * slides;
+            
+            return {
                 x,
                 y,
                 time,
                 type: 'slider',
-                curvePoints
+                hitSound,
+                curveType,
+                curvePoints,
+                slides,
+                length,
+                duration: sliderDuration
+            };
+        } else if (isSpinner) {
+            const endTime = parts[5] ? parseInt(parts[5]) : time + 1000;
+            return {
+                x: displayWidth / 2, 
+                y: displayHeight / 2,
+                time,
+                type: 'spinner',
+                hitSound,
+                endTime
             };
         }
-
-        return objectParams;
+        
+        return null;
+    }
+    
+    getTimingPointAtTime(time) {
+        let applicablePoint = null;
+        
+        for (const point of this.timingPoints) {
+            if (point.time <= time && (!applicablePoint || point.time > applicablePoint.time)) {
+                applicablePoint = point;
+            }
+        }
+        
+        return applicablePoint;
     }
 }
