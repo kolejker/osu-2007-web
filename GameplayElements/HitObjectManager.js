@@ -70,7 +70,6 @@ export default class HitObjectManager {
                                 this.playfieldScaler.mapSize(length) 
                             );
                             
-                            // Pass the current playfield scaler to the slider
                             obj.slider.playfieldScaler = this.playfieldScaler;
                             
                             obj.slider.drawSlider(container, obj.time - currentTime, this.circleSize, this.approachRate);
@@ -130,13 +129,10 @@ export default class HitObjectManager {
     }
     
     updateScreenSize(width, height) {
-        // Update the playfieldScaler with new dimensions
         this.playfieldScaler.updateScreenSize(width, height);
         
-        // Update the hitCircle's playfieldScaler
         this.hitCircle.updatePlayfieldScaler(width, height);
         
-        // Update all active sliders with the new playfieldScaler
         this.activeSliders.forEach(slider => {
             slider.updatePlayfieldScaler(width, height);
         });

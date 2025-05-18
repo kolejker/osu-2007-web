@@ -5,7 +5,9 @@ export default class Beatmap {
         this.difficulty = {};
         this.timingPoints = [];
         this.hitObjects = [];
+        this.stackOffset = 4; 
     }
+    
 
     loadBeatmap() {
         return fetch(this.filePath)
@@ -16,6 +18,74 @@ export default class Beatmap {
             });
     }
 
+    processStacking() {
+        const circleRadius = 54.4 - 4.48 * this.difficulty.CircleSize;
+        this.stackOffset = circleRadius / 10;
+        
+        this.hitObjects.forEach(obj => {
+            obj.stackCount = 0;
+        });
+        
+        for (let i = 0; i < this.hitObjects.length; i++) {
+            const currHitObject = this.hitObjects[i];
+            
+            if (currHitObject.stackCount !== 0 || currHitObject.type === 'slider') {
+                continue;
+            }
+            
+            let startTime = currHitObject.time;
+            if (currHitObject.type === 'slider') {
+                startTime += currHitObject.duration;
+            }
+            
+            for (let j = i + 1; j < this.hitObjects.length; j++) {
+                const nextObject = this.hitObjects[j];
+                
+                const preempt = this.calculatePreempt(this.difficulty.ApproachRate || this.difficulty.OverallDifficulty);
+                
+                if (nextObject.time - (preempt * 0.7) <= startTime) {
+                    if (this.arePositionsEqual(currHitObject, nextObject)) {
+                        currHitObject.stackCount++;
+                        startTime = nextObject.time;
+                        
+                        if (nextObject.type === 'slider') {
+                            startTime += nextObject.duration;
+                        }
+                    }
+                } else {
+                    break; 
+                }
+            }
+        }
+        
+        this.hitObjects.forEach(obj => {
+            if (obj.stackCount !== 0) {
+                obj.stackedX = obj.x - (obj.stackCount * this.stackOffset);
+                obj.stackedY = obj.y - (obj.stackCount * this.stackOffset);
+            } else {
+                obj.stackedX = obj.x;
+                obj.stackedY = obj.y;
+            }
+        });
+        
+        return this.hitObjects;
+    }
+    
+    arePositionsEqual(obj1, obj2) {
+        const tolerance = 3; 
+        const dx = obj1.x - obj2.x;
+        const dy = obj1.y - obj2.y;
+        return Math.sqrt(dx * dx + dy * dy) < tolerance;
+    }
+    
+    calculatePreempt(ar) {
+        if (ar < 5) {
+            return 1200 + 600 * (5 - ar) / 5;
+        } else {
+            return 1200 - 750 * (ar - 5) / 5;
+        }
+    }
+    
     parseOsuFile(content) {
         const lines = content.split('\n').map(line => line.trim());
         let section = '';
@@ -40,6 +110,8 @@ export default class Beatmap {
                 }
             }
         });
+        
+        this.processStacking();
     }
 
     parseMetadata(line) {
